@@ -1,0 +1,93 @@
+PROGRAM main
+  VAR
+    CTU0 : CTU;
+    less_than_10 : BOOL;
+    greather_than_5 : BOOL;
+    CTU1 : CTU;
+    CTU2 : CTU;
+    CTU3 : CTU;
+    CTU4 : CTU;
+    TON0 : TON;
+    AllocateA : BOOL;
+    TON1 : TON;
+    TON2 : TON;
+    AllocateB : BOOL;
+    AllocateC : BOOL;
+  END_VAR
+  VAR
+    Button AT %QX0.0 : BOOL;
+    MOTOR AT %QX0.1 : BOOL;
+    PULSE AT %QX0.2 : BOOL;
+    RESET_ALL AT %QX0.3 : BOOL;
+    WEIGHT_SEN AT %MW0 : INT;
+    COUNT AT %MW1 : INT;
+    BIG_BOX_COUNT AT %MW2 : INT;
+    MEDIUM_BOX_COUNT AT %MW3 : INT;
+    SMAll_BOX_COUNT AT %MW4 : INT;
+    isbig AT %MX0.0 : BOOL;
+    is_medium AT %MX0.1 : BOOL;
+    is_small AT %MX0.2 : BOOL;
+  END_VAR
+  VAR
+    _TMP_GT2238764_ENO : BOOL;
+    _TMP_GT2238764_OUT : BOOL;
+    _TMP_LE7915442_ENO : BOOL;
+    _TMP_LE7915442_OUT : BOOL;
+    _TMP_GT6291505_ENO : BOOL;
+    _TMP_GT6291505_OUT : BOOL;
+    _TMP_LE4547435_ENO : BOOL;
+    _TMP_LE4547435_OUT : BOOL;
+    _TMP_OR8808385_ENO : BOOL;
+    _TMP_OR8808385_OUT : BOOL;
+  END_VAR
+
+  MOTOR := Button;
+  CTU0(CU := PULSE, R := RESET_ALL, PV := 100);
+  COUNT := CTU0.CV;
+  _TMP_GT2238764_OUT := GT(EN := TRUE, IN1 := WEIGHT_SEN, IN2 := 10, ENO => _TMP_GT2238764_ENO);
+  IF _TMP_GT2238764_ENO THEN
+      isbig := _TMP_GT2238764_OUT;
+  END_IF;
+  _TMP_LE7915442_OUT := LE(EN := TRUE, IN1 := WEIGHT_SEN, IN2 := 10, ENO => _TMP_LE7915442_ENO);
+  IF _TMP_LE7915442_ENO THEN
+      less_than_10 := _TMP_LE7915442_OUT;
+  END_IF;
+  _TMP_GT6291505_OUT := GT(EN := TRUE, IN1 := WEIGHT_SEN, IN2 := 5, ENO => _TMP_GT6291505_ENO);
+  IF _TMP_GT6291505_ENO THEN
+      greather_than_5 := _TMP_GT6291505_OUT;
+  END_IF;
+  _TMP_LE4547435_OUT := LE(EN := TRUE, IN1 := WEIGHT_SEN, IN2 := 5, ENO => _TMP_LE4547435_ENO);
+  IF _TMP_LE4547435_ENO THEN
+      is_small := _TMP_LE4547435_OUT;
+  END_IF;
+  is_medium := less_than_10 AND greather_than_5;
+  CTU2(CU := PULSE AND isbig, R := RESET_ALL, PV := 100);
+  BIG_BOX_COUNT := CTU2.CV;
+  CTU3(CU := PULSE AND is_medium, R := RESET_ALL, PV := 100);
+  MEDIUM_BOX_COUNT := CTU3.CV;
+  CTU4(CU := PULSE AND is_small, R := RESET_ALL, PV := 100);
+  SMAll_BOX_COUNT := CTU4.CV;
+  TON0(EN := TRUE, IN := isbig, PT := T#2300ms);
+  IF TON0.ENO THEN
+      AllocateA := TON0.Q;
+  END_IF;
+  TON2(EN := TRUE, IN := is_medium, PT := T#3800ms);
+  IF TON2.ENO THEN
+      AllocateB := TON2.Q;
+  END_IF;
+  TON1(EN := TRUE, IN := is_small, PT := T#5300ms);
+  IF TON1.ENO THEN
+      AllocateC := TON1.Q;
+  END_IF;
+  _TMP_OR8808385_OUT := OR(EN := TRUE, IN1 := AllocateA, IN2 := AllocateB, IN3 := AllocateC, ENO => _TMP_OR8808385_ENO);
+  MOTOR := NOT(_TMP_OR8808385_OUT);
+END_PROGRAM
+
+
+CONFIGURATION Config0
+
+  RESOURCE Res0 ON PLC
+    TASK task0(INTERVAL := T#20ms,PRIORITY := 1);
+    PROGRAM instance0 WITH task0 : main;
+  END_RESOURCE
+END_CONFIGURATION
